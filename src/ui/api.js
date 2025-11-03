@@ -82,3 +82,38 @@ export async function summary() {
   if(!r.ok) throw new Error(await r.text())
   return r.json()
 }
+
+export async function listBanks() {
+  const r = await fetch(`${BASE}/banks`, { headers: { ...authHeaders() } })
+  if(!r.ok) throw new Error(await r.text()); return r.json()
+}
+
+export async function createBank(data) {
+  const r = await fetch(`${BASE}/banks`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json', ...authHeaders()},
+    body: JSON.stringify(data)
+  })
+  if(!r.ok) throw new Error(await r.text()); return r.json()
+}
+
+export async function listPayments(invoice_id) {
+  const url = invoice_id ? `${BASE}/payments?invoice_id=${invoice_id}` : `${BASE}/payments`
+  const r = await fetch(url, { headers:{ ...authHeaders() } })
+  if(!r.ok) throw new Error(await r.text()); return r.json()
+}
+
+export async function createPayment(data) {
+  const r = await fetch(`${BASE}/payments`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json', ...authHeaders()},
+    body: JSON.stringify(data)
+  })
+  if(!r.ok) throw new Error(await r.text()); return r.json()
+}
+
+export async function memberAccount(memberId){
+  const r = await fetch(`${BASE}/members/${memberId}/account`, { headers:{ ...authHeaders() } })
+  if(!r.ok) throw new Error(await r.text()); return r.json()
+}
+
