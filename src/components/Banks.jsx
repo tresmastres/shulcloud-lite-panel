@@ -1,34 +1,51 @@
-import { useEffect, useState } from "react";
-import { API } from "../api";
 
-export default function Banks() {
-  const [banks, setBanks] = useState([]);
-  const [name, setName] = useState("");
+import { useEffect, useState } from 'react'
+import { API, toastError } from '../api'
+import SectionTitle from './SectionTitle'
 
-  const load = async () => {
-    const r = await API.get("/banks");
-    setBanks(r.data);
-  };
+export default function Banks(){
+  const [rows, setRows] = useState([])
+  const [name, setName] = useState('')
 
-  const add = async () => {
-    if (!name) return;
-    await API.post("/banks", { nombre: name });
-    setName("");
-    load();
-  };
+  async function load(){
+    try{
+      const r = await API.get('/banks')
+      setRows(r.data || [])
+    }catch(e){ toastError(e) }
+  }
+  useEffect(()=>{ load() }, [])
 
-  useEffect(() => { load(); }, []);
+  async function add(){
+    if(!name) return
+    try{
+      await API.post('/banks', { nombre:name })
+      setName(''); load()
+    }catch(e){ toastError(e) }
+  }
 
   return (
-    <div>
-      <h2>Bancos</h2>
-      <input placeholder="Nombre del banco" value={name} onChange={e => setName(e.target.value)} />
-      <button onClick={add}>Añadir</button>
-      <ul>
-        {banks.map(b => (
-          <li key={b.id}>{b.nombre}</li>
-        ))}
-      </ul>
+    <div className="space-y-4">
+      <SectionTitle title="Bancos" />
+      <div className="card grid md:grid-cols-3 gap-3">
+        <input className="input" placeholder="Nombre banco" value={name} onChange={e=>setName(e.target.value)} />
+        <div></div>
+        <button className="btn" onClick={add}>Añadir</button>
+      </div>
+
+      <div className="card">
+        <table className="w-full table">
+          <thead><tr><th>ID</th><th>Nombre</th></tr></thead>
+          <tbody>
+            {(rows || []).map(b => (
+              <tr key={b.id}>
+                <td>{b.id}</td>
+                <td>{b.nombre}</td>
+              </tr>
+            ))}
+            {(!rows || rows.length===0) && <tr><td colSpan="2" className="py-6 text-center text-gray-500">Sin datos</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </div>
-  );
+  )
 }
