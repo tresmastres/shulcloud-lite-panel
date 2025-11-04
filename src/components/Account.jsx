@@ -27,6 +27,8 @@ export default function Account(){
   }
 
   const invoices = (data.invoices || []).filter(i => i && (i.invoice_id || i.full_number || i.amount_cents))
+  const payments = data.payments || []
+
 
   const headerName = (data.full_name || data.name || '') ? `${data.full_name || data.name} (${data.member_id || id})` : `Miembro ${data.member_id || id}`
 
@@ -53,6 +55,11 @@ export default function Account(){
             {invoices.length===0 && <tr><td colSpan="6" className="py-6 text-center text-gray-500">Sin facturas</td></tr>}
           </tbody>
         </table>
+        <h3 className="mt-6 mb-2 font-semibold">Histórico de cobros</h3>
+<table ...>
+  {/* recorrer payments */}
+</table>
+
       </div>
     </div>
   )
