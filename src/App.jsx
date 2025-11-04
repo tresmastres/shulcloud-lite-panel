@@ -1,10 +1,13 @@
-
+import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
 import Members from './components/Members.jsx'
 import Invoices from './components/Invoices.jsx'
 import Payments from './components/Payments.jsx'
 import Banks from './components/Banks.jsx'
 import Account from './components/Account.jsx'
+import Login from './components/Login.jsx'
+import Families from './components/Families.jsx'
+import { API } from './api'
 
 function SidebarLink({ to, children }){
   return (
@@ -15,20 +18,39 @@ function SidebarLink({ to, children }){
 }
 
 export default function App(){
+  const [token, setToken] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null))
+
+  function handleLogin(tok){
+    setToken(tok)
+  }
+
+  function handleLogout(){
+    localStorage.removeItem('token')
+    delete API.defaults.headers.common['Authorization']
+    setToken(null)
+  }
+
+  if (!token){
+    return <Login onLogin={handleLogin} />
+  }
+
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-64 bg-white border-r p-4 hidden md:block">
-        <div className="text-xl font-bold mb-4 text-sky-700">ShulCloud Lite</div>
-        <nav className="space-y-1">
-          <SidebarLink to="/">Miembros</SidebarLink>
-          <SidebarLink to="/invoices">Facturas</SidebarLink>
-          <SidebarLink to="/payments">Cobros</SidebarLink>
-          <SidebarLink to="/banks">Bancos</SidebarLink>
-        </nav>
+    <div className="min-h-screen bg-slate-50 flex">
+      <aside className="w-60 bg-white border-r p-4 space-y-3">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-lg font-bold text-slate-700">Panel</h1>
+          <button onClick={handleLogout} className="text-xs text-slate-400 hover:text-slate-600">Salir</button>
+        </div>
+        <SidebarLink to="/">Familias</SidebarLink>
+        <SidebarLink to="/members">Miembros</SidebarLink>
+        <SidebarLink to="/invoices">Facturas</SidebarLink>
+        <SidebarLink to="/payments">Cobros</SidebarLink>
+        <SidebarLink to="/banks">Bancos</SidebarLink>
       </aside>
-      <main className="flex-1 p-4 md:p-8 space-y-6">
+      <main className="flex-1">
         <Routes>
-          <Route path="/" element={<Members />} />
+          <Route path="/" element={<Families />} />
+          <Route path="/members" element={<Members />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/banks" element={<Banks />} />

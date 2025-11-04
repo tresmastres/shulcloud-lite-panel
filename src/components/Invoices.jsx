@@ -1,13 +1,12 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import { API, toastError } from '../api'
 import SectionTitle from './SectionTitle'
 
 export default function Invoices(){
   const [rows, setRows] = useState([])
-  const [memberId, setMemberId] = useState('')
-  const [amount, setAmount] = useState('')
   const [q, setQ] = useState('')
+  const [paying, setPaying] = useState(null)
+  const [amount, setAmount] = useState('')
 
   async function load(){
     try{
@@ -15,58 +14,77 @@ export default function Invoices(){
       setRows(r.data || [])
     }catch(e){ toastError(e) }
   }
+
   useEffect(()=>{ load() }, [])
 
-  async function add(){
-    if(!memberId || !amount) return
+  const filtered = rows.filter(i => !q || (i.full_number || '').toLowerCase().includes(q.toLowerCase()) || (i.description || '').toLowerCase().includes(q.toLowerCase()))
+
+  function startPay(inv){
+    setPaying(inv)
+    setAmount(((inv.balance_cents ?? inv.amount_cents) || 0)/100)
+  }
+
+  async function submitPay(e){
+    e.preventDefault()
+    if (!paying) return
     try{
-      await API.post('/invoices', { member_id:Number(memberId), amount_cents: Math.round(Number(amount)*100) })
-      setMemberId(''); setAmount(''); load()
+      await API.post('/payments', {
+        invoice_id: paying.id,
+        amount: Number(amount),
+        method: 'efectivo'
+      })
+      alert('Cobro registrado')
+      setPaying(null)
+      setAmount('')
+      load()
     }catch(e){ toastError(e) }
   }
 
-  const filtered = useMemo(()=>{
-    const k = q.toLowerCase().trim()
-    if(!k) return rows
-    return rows.filter(i => (i.full_number || String(i.id)).toString().toLowerCase().includes(k))
-  }, [q, rows])
-
   return (
-    <div className="space-y-4">
-      <SectionTitle title="Facturas" />
-      <div className="grid md:grid-cols-3 gap-3 card">
-        <input className="input" placeholder="ID Miembro" value={memberId} onChange={e=>setMemberId(e.target.value)} />
-        <input className="input" placeholder="Importe (€)" value={amount} onChange={e=>setAmount(e.target.value)} />
-        <button className="btn" onClick={add}>Crear factura</button>
+    <div className="p-6 space-y-6">
+      <SectionTitle title="Facturas" subtitle="Listado de facturas emitidas" />
+      <div className="flex gap-2">
+        <input value={q} onChange={e=>setQ(e.target.value)} className="input" placeholder="Buscar..." />
       </div>
-
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <input className="input max-w-xs" placeholder="Buscar # factura…" value={q} onChange={e=>setQ(e.target.value)} />
-          <span className="text-sm text-gray-500">{filtered.length} resultados</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full table">
-            <thead>
-              <tr><th>#</th><th>Fecha</th><th>Importe</th><th>Estado</th><th>PDF</th></tr>
-            </thead>
-            <tbody>
-              {filtered.map(i => (
-                <tr key={i.id}>
-                  <td>{i.full_number || i.id}</td>
-                  <td>{i.issue_date?.slice(0,10) || '-'}</td>
-                  <td>{(i.amount_cents/100).toFixed(2)} {i.currency || 'EUR'}</td>
-                  <td>
-                    <span className={'badge ' + (i.status==='paid' ? 'badge-paid' : i.status==='partial' ? 'badge-partial' : 'badge-open')}>{i.status}</span>
-                  </td>
-                  <td><a className="btn" href={`${API.defaults.baseURL}/invoices/${i.id}/pdf`} target="_blank">Ver PDF</a></td>
-                </tr>
-              ))}
-              {filtered.length===0 && <tr><td colSpan="5" className="py-6 text-center text-gray-500">Sin datos</td></tr>}
-            </tbody>
-          </table>
-        </div>
+      <div className="bg-white rounded-xl shadow overflow-hidden">
+        <table className="w-full table">
+          <thead>
+            <tr><th>#</th><th>Concepto</th><th>Fecha</th><th>Importe</th><th>Estado</th><th>PDF</th><th></th></tr>
+          </thead>
+          <tbody>
+            {filtered.map(i => (
+              <tr key={i.id}>
+                <td>{i.full_number || i.id}</td>
+                <td>{i.description || i.notes || '-'}</td>
+                <td>{i.issue_date?.slice(0,10) || '-'}</td>
+                <td>{((i.amount_cents ?? 0)/100).toFixed(2)} {i.currency || 'EUR'}</td>
+                <td>
+                  <span className={'badge ' + (i.status==='paid' ? 'badge-paid' : i.status==='partial' ? 'badge-partial' : 'badge-open')}>{i.status}</span>
+                </td>
+                <td><a className="btn" href={`${API.defaults.baseURL}/invoices/${i.id}/pdf`} target="_blank">Ver PDF</a></td>
+                <td><button className="btn btn-xs" onClick={()=>startPay(i)}>Cobrar</button></td>
+              </tr>
+            ))}
+            {filtered.length===0 && <tr><td colSpan="7" className="py-6 text-center text-gray-500">Sin datos</td></tr>}
+          </tbody>
+        </table>
       </div>
+      {paying && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
+          <form onSubmit={submitPay} className="bg-white p-6 rounded-xl space-y-3 w-full max-w-sm">
+            <h2 className="font-bold text-slate-700">Registrar cobro</h2>
+            <p className="text-sm text-slate-500">Factura {paying.full_number || paying.id}</p>
+            <div>
+              <label className="block text-sm mb-1">Importe</label>
+              <input value={amount} onChange={e=>setAmount(e.target.value)} type="number" step="0.01" className="input w-full" required />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={()=>setPaying(null)} className="btn btn-secondary">Cancelar</button>
+              <button className="btn">Guardar</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
